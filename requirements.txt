@@ -1,0 +1,6 @@
+google-analytics-data
+google-auth
+google-auth-oauthlib
+openpyxl
+requests
+python-dateutil

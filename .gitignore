@@ -1,0 +1,31 @@
+# --- Sensitive / Credentials ---
+token.json
+oauth_client.json
+config.json
+credientals.json
+credentials.json
+figma_vars.json
+*.json
+check.md
+info.md
+
+# --- Keep these JSON files ---
+!node_map.json
+
+# --- Python cache ---
+__pycache__/
+*.pyc
+*.pyo
+
+# --- Generated output ---
+report_data.json
+nodes_output.txt
+
+
+# --- Excel output ---
+data/
+
+# --- OS / Editor ---
+.DS_Store
+Thumbs.db
+.vscode/

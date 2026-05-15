@@ -1,0 +1,93 @@
+{
+  "report_month_year":            { "node_id": "252:49",  "type": "simple" },
+
+  "ga4_sessions_heading":         { "node_id": "252:54",  "type": "composite", "template": "{sessions} Session" },
+  "ga4_current_block":            { "node_id": "252:56",  "type": "composite", "template": "Total Users        {users} Bounce Rate      {bounce_rate}% Conversion         {conversions}" },
+
+  "ga4_prev_year_sessions":       { "node_id": "252:59",  "type": "composite", "template": "Total Sessions    {value}" },
+  "ga4_prev_year_users":          { "node_id": "252:60",  "type": "composite", "template": "Total Users          {value}" },
+  "ga4_prev_year_bounce":         { "node_id": "252:61",  "type": "composite", "template": "Bounce Rate        {value}%" },
+  "ga4_prev_year_conversion":     { "node_id": "252:62",  "type": "composite", "template": "Conversion          {value}" },
+
+  "ga4_12mo_sessions":            { "node_id": "252:67",  "type": "composite", "template": "Total Sessions     {value}" },
+  "ga4_12mo_users":               { "node_id": "252:68",  "type": "composite", "template": "Total Users           {value}" },
+  "ga4_12mo_bounce":              { "node_id": "252:69",  "type": "composite", "template": "Bounce Rate        {value}%" },
+  "ga4_12mo_conversion":          { "node_id": "252:63",  "type": "composite", "template": "Conversion           {value}" },
+
+  "organic_new_users":            { "node_id": "252:73",  "type": "composite", "template": "New User         {value}" },
+  "organic_bounce_rate":          { "node_id": "252:74",  "type": "composite", "template": "Bounce Rate    {value}%" },
+  "organic_avg_duration":         { "node_id": "252:75",  "type": "composite", "template": "Avg Session Duration           {value}" },
+  "organic_sessions":             { "node_id": "252:76",  "type": "composite", "template": "Sessions         {value}" },
+
+  "social_facebook_current":      { "node_id": "252:96",  "type": "simple" },
+  "social_pinterest_current":     { "node_id": "252:97",  "type": "simple" },
+  "social_instagram_current":     { "node_id": "252:98",  "type": "simple" },
+  "social_linkedin_current":      { "node_id": "252:99",  "type": "simple" },
+  "social_facebook_prev":         { "node_id": "252:100", "type": "simple" },
+  "social_pinterest_prev":        { "node_id": "252:101", "type": "simple" },
+  "social_instagram_prev":        { "node_id": "252:102", "type": "simple" },
+  "social_linkedin_prev":         { "node_id": "252:103", "type": "simple" },
+
+  "ua_total_users":               { "node_id": "252:138", "type": "simple" },
+  "ua_total_new_users":           { "node_id": "252:143", "type": "simple" },
+  "ua_total_returning_users":     { "node_id": "252:144", "type": "simple" },
+  "ua_total_key_events":          { "node_id": "252:145", "type": "simple" },
+
+  "ua_organic_total":             { "node_id": "252:107", "type": "simple" },
+  "ua_organic_new":               { "node_id": "252:128", "type": "simple" },
+  "ua_organic_returning":         { "node_id": "252:129", "type": "simple" },
+  "ua_organic_key_events":        { "node_id": "252:130", "type": "simple" },
+
+  "ua_direct_total":              { "node_id": "252:108", "type": "simple" },
+  "ua_direct_new":                { "node_id": "252:125", "type": "simple" },
+  "ua_direct_returning":          { "node_id": "252:126", "type": "simple" },
+  "ua_direct_key_events":         { "node_id": "252:127", "type": "simple" },
+
+  "ua_referral_total":            { "node_id": "252:109", "type": "simple" },
+  "ua_referral_new":              { "node_id": "252:110", "type": "simple" },
+  "ua_referral_returning":        { "node_id": "252:111", "type": "simple" },
+  "ua_referral_key_events":       { "node_id": "252:112", "type": "simple" },
+
+  "ua_paid_total":                { "node_id": "252:113", "type": "simple" },
+  "ua_paid_new":                  { "node_id": "252:116", "type": "simple" },
+  "ua_paid_returning":            { "node_id": "252:119", "type": "simple" },
+  "ua_paid_key_events":           { "node_id": "252:122", "type": "simple" },
+
+  "ua_organic_social_total":      { "node_id": "252:114", "type": "simple" },
+  "ua_organic_social_new":        { "node_id": "252:115", "type": "simple" },
+  "ua_organic_social_returning":  { "node_id": "252:120", "type": "simple" },
+  "ua_organic_social_key_events": { "node_id": "252:121", "type": "simple" },
+
+  "ua_unassigned_total":          { "node_id": "252:117", "type": "simple" },
+  "ua_unassigned_new":            { "node_id": "252:118", "type": "simple" },
+  "ua_unassigned_returning":      { "node_id": "252:123", "type": "simple" },
+  "ua_unassigned_key_events":     { "node_id": "252:124", "type": "simple" },
+
+  "conv_organic_current":         { "node_id": "252:173", "type": "simple" },
+  "conv_organic_prev_year":       { "node_id": "252:174", "type": "simple" },
+  "conv_organic_12mo":            { "node_id": "252:175", "type": "simple" },
+
+  "conv_referral_avg12mo":        { "node_id": "252:176", "type": "simple" },
+  "conv_unassigned_current":      { "node_id": "252:181", "type": "simple" },
+  "conv_referral_current":        { "node_id": "252:182", "type": "simple" },
+  "conv_unassigned_prev_year":    { "node_id": "252:183", "type": "simple" },
+  "conv_unassigned_12mo":         { "node_id": "252:184", "type": "simple" },
+  "conv_social_prev_year":        { "node_id": "252:185", "type": "simple" },
+  "conv_social_12mo":             { "node_id": "252:186", "type": "simple" },
+
+  "conv_paid_current":            { "node_id": "252:190", "type": "simple" },
+  "conv_paid_prev_year":          { "node_id": "252:191", "type": "simple" },
+  "conv_referral_prev_year":      { "node_id": "252:192", "type": "simple" },
+  "conv_paid_12mo":               { "node_id": "252:193", "type": "simple" },
+
+  "conv_direct_current":          { "node_id": "252:197", "type": "simple" },
+  "conv_social_current":          { "node_id": "252:198", "type": "simple" },
+  "conv_direct_prev_year":        { "node_id": "252:199", "type": "simple" },
+  "conv_direct_12mo":             { "node_id": "252:200", "type": "simple" },
+
+  "conv_total_current":           { "node_id": "252:204", "type": "simple" },
+  "conv_total_prev_year":         { "node_id": "252:205", "type": "simple" },
+  "conv_total_12mo":              { "node_id": "252:206", "type": "simple" },
+
+  "authority_score":              { "node_id": "252:51",  "type": "simple",  "source": "semrush" }
+}
