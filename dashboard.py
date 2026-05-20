@@ -94,10 +94,30 @@ def load_clients() -> dict:
     return clients
 
 
+def _default_config() -> dict:
+    """Fallback config for cloud where config.json doesn't exist."""
+    today = date.today()
+    last_month = today.replace(day=1) - relativedelta(months=1)
+    prev = last_month.replace(day=1) - relativedelta(months=1)
+    return {
+        "ga4_property_id": _secret("GA4_PROPERTY_ID", ""),
+        "figma_token":     _secret("FIGMA_TOKEN", ""),
+        "figma_file_key":  _secret("FIGMA_FILE_KEY", ""),
+        "report_month":    MONTHS[last_month.month - 1],
+        "report_year":     str(last_month.year),
+        "prev_month_label": f"{MONTH_ABBR[MONTHS[prev.month - 1]]} {prev.year}",
+        "client_name":     _secret("CLIENT_NAME", "My Client"),
+        "figma_update_method": "variables",
+    }
+
+
 def load_config() -> dict:
-    with open("config.json") as f:
-        cfg = json.load(f)
-    # Overlay secrets from env / st.secrets (never stored in config.json on cloud)
+    if os.path.exists("config.json"):
+        with open("config.json") as f:
+            cfg = json.load(f)
+    else:
+        cfg = _default_config()
+    # Overlay secrets from env / st.secrets
     figma_token = _secret("FIGMA_TOKEN")
     if figma_token:
         cfg["figma_token"] = figma_token
