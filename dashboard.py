@@ -288,11 +288,15 @@ with st.sidebar:
 # ── Main header ───────────────────────────────────────────────────────────────
 
 cfg = load_config()
-st.title(f"{cfg['client_name']} — {cfg['report_month']} {cfg['report_year']}")
+
+# Live config — uses current sidebar widget values (no save needed before running)
+live_cfg = build_config(cfg, client_name, ga4_id, figma_key, figma_token, month, year, method)
+
+st.title(f"{live_cfg['client_name']} — {live_cfg['report_month']} {live_cfg['report_year']}")
 st.caption(
-    f"GA4: `{cfg['ga4_property_id']}` | "
-    f"Figma: `{cfg['figma_file_key']}` | "
-    f"Method: `{cfg.get('figma_update_method', 'plugin')}`"
+    f"GA4: `{live_cfg['ga4_property_id']}` | "
+    f"Figma: `{live_cfg['figma_file_key']}` | "
+    f"Method: `{live_cfg.get('figma_update_method', 'plugin')}`"
 )
 
 # Auto-month banner: warn if config month doesn't match expected reporting month
