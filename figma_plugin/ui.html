@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Inter, sans-serif; padding: 20px; background: #fff; color: #333; }
+  h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  p  { font-size: 12px; color: #888; margin-bottom: 16px; line-height: 1.5; }
+  button {
+    width: 100%; padding: 10px 16px;
+    background: #18A0FB; color: #fff;
+    border: none; border-radius: 6px;
+    cursor: pointer; font-size: 13px; font-weight: 600;
+    transition: background 0.15s;
+  }
+  button:hover:not(:disabled) { background: #0d8de8; }
+  button:disabled { background: #ccc; cursor: not-allowed; }
+  #status { margin-top: 16px; font-size: 12px; line-height: 1.7; }
+  .ok   { color: #1BC47D; font-weight: 600; }
+  .err  { color: #F24822; }
+  .info { color: #888; }
+  .warn { color: #F5A623; }
+  code  { background: #f4f4f4; padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<h3>Report Updater</h3>
+<p>Make sure <code>py run_report.py</code> is running in your terminal, then click the button below.</p>
+
+<button id="btn" onclick="run()">Fetch &amp; Update All Nodes</button>
+
+<div id="status">
+  <span class="info">Ready — waiting for your click.</span>
+</div>
+
+<script>
+  function setStatus(html) {
+    document.getElementById('status').innerHTML = html;
+  }
+
+  function run() {
+    const btn = document.getElementById('btn');
+    btn.disabled = true;
+    setStatus('<span class="info">Connecting to localhost:5555...</span>');
+
+    fetch('http://localhost:5555/data')
+      .then(r => {
+        if (!r.ok) throw new Error('Server returned ' + r.status);
+        return r.json();
+      })
+      .then(data => {
+        setStatus('<span class="info">Data received. Updating Figma nodes...</span>');
+        parent.postMessage({
+          pluginMessage: {
+            type: 'update-nodes',
+            reportData: data.report_data,
+            nodeMap: data.node_map
+          }
+        }, '*');
+      })
+      .catch(() => {
+        btn.disabled = false;
+        setStatus(
+          '<span class="err">Could not connect to localhost:5555.</span><br>' +
+          '<span class="info">Make sure <code>py run_report.py</code> is running in your terminal and try again.</span>'
+        );
+      });
+  }
+
+  window.onmessage = (event) => {
+    const msg = event.data.pluginMessage;
+    if (!msg || msg.type !== 'done') return;
+
+    document.getElementById('btn').disabled = false;
+
+    let html = `<span class="ok">✓ ${msg.updated} nodes updated</span>`;
+    if (msg.skipped)
+      html += `<br><span class="info">${msg.skipped} fields skipped (manual / no GA4 data)</span>`;
+    if (msg.errors.length)
+      html += `<br><span class="err">⚠ Errors (${msg.errors.length}): ${msg.errors.slice(0, 3).join(', ')}${msg.errors.length > 3 ? '...' : ''}</span>`;
+
+    setStatus(html);
+  };
+</script>
+</body>
+</html>
