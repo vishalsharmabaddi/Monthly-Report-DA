@@ -250,13 +250,14 @@ with st.sidebar:
     )
     year = st.text_input("Year", cfg.get("report_year", "2026"))
 
-    method_opts = ["plugin", "mcp", "variables", "claude_api"]
+    method_opts = ["plugin", "variables"]
     cur_method = cfg.get("figma_update_method", "plugin")
     if cur_method not in method_opts:
-        cur_method = method_opts[0]
+        cur_method = "plugin"
     method = st.selectbox(
         "Figma Update Method", method_opts,
         index=method_opts.index(cur_method),
+        help="plugin = local Figma Desktop  |  variables = paid Figma plan, cloud-compatible",
     )
 
     st.divider()
@@ -344,41 +345,14 @@ def step_fetch_ga4(cfg: dict) -> dict | None:
 def step_push_figma(cfg: dict, report_data: dict) -> bool:
     push_method = cfg.get("figma_update_method", "plugin")
 
-    if push_method == "mcp":
-        st.info(
-            "**report_data.json is ready.**\n\n"
-            "Tell Claude: **'push to figma'**\n\n"
-            "Claude will read report_data.json + node_map.json and push all values."
-        )
-        return True
-
-    if push_method in ("variables", "claude_api") and not os.path.exists("figma_vars.json"):
+    if push_method == "variables" and not os.path.exists("figma_vars.json"):
         st.error(
             "**figma_vars.json not found.**\n\n"
-            "One-time setup required:\n"
-            "1. Make sure you have a paid Figma plan\n"
-            "2. Run locally: `py setup_figma.py`\n"
-            "3. Commit the generated `figma_vars.json` to GitHub"
+            "One-time setup required (paid Figma plan):\n"
+            "1. Run locally: `py setup_figma.py`\n"
+            "2. Commit the generated `figma_vars.json` to GitHub"
         )
         return False
-
-    if push_method == "claude_api":
-        api_key = _secret("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
-            st.error(
-                "**ANTHROPIC_API_KEY not found.**\n\n"
-                "Add it to Streamlit Cloud secrets:\n"
-                "```toml\nANTHROPIC_API_KEY = \"sk-ant-...\"\n```\n"
-                "Get your key: console.anthropic.com → API Keys\n\n"
-                "Set usage limits: console.anthropic.com → **Limits**"
-            )
-            return False
-        os.environ["ANTHROPIC_API_KEY"] = api_key
-        st.info(
-            "Claude API push in progress...\n\n"
-            "Estimated cost: ~$0.01 per run (claude-sonnet-4-6, ~1k tokens)\n\n"
-            "Set monthly spend limits: console.anthropic.com → **Limits**"
-        )
 
     if push_method == "plugin":
         st.info(
@@ -501,7 +475,7 @@ with st.expander("Run Full Pipeline — Fetch GA4 + Push Figma + Export Excel", 
         label = "Waiting for Figma plugin..." if method == "plugin" else "Pushing to Figma..."
         with st.spinner(label):
             ok = step_push_figma(cfg, report_data)
-        if not ok and method != "mcp":
+        if not ok:
             st.stop()
 
         st.markdown("**Step 3 / 3 — Export Excel**")
