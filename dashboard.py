@@ -219,7 +219,7 @@ with st.sidebar:
     )
     year = st.text_input("Year", cfg.get("report_year", "2026"))
 
-    method_opts = ["plugin", "mcp", "variables"]
+    method_opts = ["plugin", "mcp", "variables", "claude_api"]
     cur_method = cfg.get("figma_update_method", "plugin")
     if cur_method not in method_opts:
         cur_method = method_opts[0]
