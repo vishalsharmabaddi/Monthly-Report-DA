@@ -15,6 +15,21 @@ SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
 
 
 def get_credentials():
+    # Cloud path: build credentials directly from environment variables (no browser needed)
+    refresh_token = os.environ.get("GOOGLE_REFRESH_TOKEN")
+    if refresh_token:
+        creds = Credentials(
+            token=None,
+            refresh_token=refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+            client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+            scopes=SCOPES,
+        )
+        creds.refresh(Request())
+        return creds
+
+    # Local path: file-based OAuth with token caching
     creds = None
     if os.path.exists("token.json"):
         creds = Credentials.from_authorized_user_file("token.json", SCOPES)

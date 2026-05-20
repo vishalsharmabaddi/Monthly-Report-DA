@@ -12,6 +12,12 @@ info.md
 # --- Keep these JSON files ---
 !node_map.json
 
+# --- Streamlit secrets (never commit) ---
+.streamlit/secrets.toml
+
+# --- Per-client node maps (contain Figma node IDs, keep in git) ---
+!clients/
+
 # --- Python cache ---
 __pycache__/
 *.pyc
@@ -24,6 +30,10 @@ nodes_output.txt
 
 # --- Excel output ---
 data/
+
+# --- Documentation (local only, except README) ---
+*.md
+!README.md
 
 # --- OS / Editor ---
 .DS_Store
