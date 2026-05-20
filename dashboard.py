@@ -219,17 +219,10 @@ with st.sidebar:
     )
     year = st.text_input("Year", cfg.get("report_year", "2026"))
 
-    # Cloud: hide plugin method (localhost:5555 doesn't work from cloud)
-    if IS_CLOUD:
-        method_opts = ["variables", "mcp"]
-        st.caption("Plugin method is only available when running locally.")
-    else:
-        method_opts = ["plugin", "mcp", "variables"]
-
+    method_opts = ["plugin", "mcp", "variables"]
     cur_method = cfg.get("figma_update_method", "plugin")
     if cur_method not in method_opts:
         cur_method = method_opts[0]
-
     method = st.selectbox(
         "Figma Update Method", method_opts,
         index=method_opts.index(cur_method),
