@@ -205,12 +205,43 @@ with st.sidebar:
     ga4_id      = st.text_input("GA4 Property ID", cfg.get("ga4_property_id", ""))
     figma_key   = st.text_input("Figma File Key", cfg.get("figma_file_key", ""))
 
-    # On cloud, figma_token comes from secrets — show as read-only hint
-    if IS_CLOUD and _secret("FIGMA_TOKEN"):
-        st.text_input("Figma Token", value="(from environment)", disabled=True)
-        figma_token = cfg.get("figma_token", "")
+    # ── Figma Token: Personal or Team ────────────────────────────────────────
+    st.markdown("**Figma Token**")
+    token_mode = st.radio(
+        "token_mode", ["Personal", "Team (shared)"],
+        horizontal=True, label_visibility="collapsed",
+        index=0 if not _secret("FIGMA_TOKEN") else 1,
+    )
+
+    if token_mode == "Personal":
+        figma_token = st.text_input(
+            "Your Figma Token", cfg.get("figma_token", ""),
+            type="password", placeholder="figd_...",
+            label_visibility="collapsed",
+        )
     else:
-        figma_token = st.text_input("Figma Token", cfg.get("figma_token", ""), type="password")
+        team_token  = _secret("FIGMA_TOKEN")
+        figma_token = team_token or cfg.get("figma_token", "")
+        st.text_input("Figma Token", "(team — from secrets)", disabled=True,
+                      label_visibility="collapsed")
+        if not team_token:
+            st.warning("No team token found in secrets.")
+        st.button("How to set up team token?", key="figma_token_help",
+                  on_click=lambda: st.session_state.update({"show_figma_token_help": True}))
+
+    if st.session_state.get("show_figma_token_help"):
+        st.info(
+            "**Add team Figma token to Streamlit Cloud:**\n\n"
+            "1. Go to your app on share.streamlit.io\n"
+            "2. Click ⋮ → **Settings** → **Secrets**\n"
+            "3. Add this line:\n"
+            "```toml\nFIGMA_TOKEN = \"figd_your_token_here\"\n```\n"
+            "4. Click **Save** — app restarts automatically\n\n"
+            "Get your token: figma.com → Account Settings → **Personal Access Tokens**"
+        )
+        if st.button("Got it", key="close_figma_help"):
+            st.session_state["show_figma_token_help"] = False
+            st.rerun()
 
     month_val = cfg.get("report_month", "January")
     month = st.selectbox(
@@ -321,12 +352,33 @@ def step_push_figma(cfg: dict, report_data: dict) -> bool:
         )
         return True
 
-    if push_method == "variables" and not os.path.exists("figma_vars.json"):
+    if push_method in ("variables", "claude_api") and not os.path.exists("figma_vars.json"):
         st.error(
-            "figma_vars.json not found. "
-            "Run `py setup_figma.py` once to create Figma variables (requires paid Figma plan)."
+            "**figma_vars.json not found.**\n\n"
+            "One-time setup required:\n"
+            "1. Make sure you have a paid Figma plan\n"
+            "2. Run locally: `py setup_figma.py`\n"
+            "3. Commit the generated `figma_vars.json` to GitHub"
         )
         return False
+
+    if push_method == "claude_api":
+        api_key = _secret("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            st.error(
+                "**ANTHROPIC_API_KEY not found.**\n\n"
+                "Add it to Streamlit Cloud secrets:\n"
+                "```toml\nANTHROPIC_API_KEY = \"sk-ant-...\"\n```\n"
+                "Get your key: console.anthropic.com → API Keys\n\n"
+                "Set usage limits: console.anthropic.com → **Limits**"
+            )
+            return False
+        os.environ["ANTHROPIC_API_KEY"] = api_key
+        st.info(
+            "Claude API push in progress...\n\n"
+            "Estimated cost: ~$0.01 per run (claude-sonnet-4-6, ~1k tokens)\n\n"
+            "Set monthly spend limits: console.anthropic.com → **Limits**"
+        )
 
     if push_method == "plugin":
         st.info(
