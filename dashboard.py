@@ -81,14 +81,18 @@ def _secret(key: str, fallback: str = "") -> str:
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def load_clients() -> dict:
+    """Return {display_name: config_path} for every client subfolder."""
     CLIENTS_DIR.mkdir(exist_ok=True)
     clients = {}
-    for f in sorted(CLIENTS_DIR.glob("*.json")):
-        if "_node_map" in f.name:
+    for d in sorted(CLIENTS_DIR.iterdir()):
+        if not d.is_dir() or d.name.startswith('_'):
+            continue
+        cfg_path = d / 'config.json'
+        if not cfg_path.exists():
             continue
         try:
-            data = json.loads(f.read_text())
-            clients[data.get("client_name", f.stem)] = f
+            data = json.loads(cfg_path.read_text())
+            clients[data.get("client_name", d.name)] = cfg_path
         except Exception:
             pass
     return clients
@@ -136,23 +140,26 @@ def _client_slug(cfg: dict) -> str:
 def save_client(cfg: dict) -> Path:
     CLIENTS_DIR.mkdir(exist_ok=True)
     slug = _client_slug(cfg)
-    path = CLIENTS_DIR / f"{slug}.json"
-    path.write_text(json.dumps(cfg, indent=2))
-    # Also snapshot current node_map.json with this client
+    client_dir = CLIENTS_DIR / slug
+    client_dir.mkdir(exist_ok=True)
+    cfg_path = client_dir / 'config.json'
+    cfg_path.write_text(json.dumps(cfg, indent=2))
+    # Snapshot current node_map.json into the client folder
     if Path("node_map.json").exists():
-        nm_path = CLIENTS_DIR / f"{slug}_node_map.json"
-        nm_path.write_text(Path("node_map.json").read_text())
-    return path
+        (client_dir / 'node_map.json').write_text(Path("node_map.json").read_text())
+    return cfg_path
 
 
 def load_client(cfg_path: Path):
+    """Load a client: copy its files to root so the pipeline can use them."""
     loaded = json.loads(cfg_path.read_text())
     save_config(loaded)
-    # Restore this client's node_map if it was saved
-    slug = _client_slug(loaded)
-    nm_path = CLIENTS_DIR / f"{slug}_node_map.json"
-    if nm_path.exists():
-        Path("node_map.json").write_text(nm_path.read_text())
+    client_dir = cfg_path.parent
+    # Copy client files to root so fetch_ga4 / update_figma pick them up
+    for name in ('node_map.json', 'token.json', 'oauth_client.json'):
+        src = client_dir / name
+        if src.exists():
+            Path(name).write_text(src.read_text())
 
 
 def build_config(cfg_base, client_name, ga4_id, figma_key, figma_token,
@@ -453,8 +460,13 @@ if st.session_state.get("show_node_map_help"):
     st.info(
         "**Only needed when the Figma template structure changes.**\n\n"
         "1. Run in terminal: `py fetch_nodes.py`\n"
-        "2. Tell Claude: *'Map my Figma nodes to report fields using nodes_output.txt'*\n"
-        "3. Claude updates node_map.json automatically\n"
+        "2. Tell Claude:\n\n"
+        "   *\"Please complete our Figma node mapping:\n"
+        "   1. Identify the unmatched fields from the top section of 'nodes_output.txt'.\n"
+        "   2. Match them to correct Figma node IDs in 'nodes_output.txt' by comparing values in 'report_data.json' and analyzing parent frame paths.\n"
+        "   3. Update ONLY these newly resolved fields in 'node_map.json', leaving already mapped fields intact.\n"
+        "   4. Let me know which fields you mapped.\"*\n\n"
+        "3. Claude updates `node_map.json` automatically\n"
         "4. Re-run the pipeline\n\n"
         "For new months or new clients using the same template, this is skipped automatically."
     )

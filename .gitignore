@@ -12,6 +12,7 @@ info.md
 # --- Keep these JSON files ---
 !node_map.json
 !figma_vars.json
+!figma_plugin/manifest.json
 
 # --- Streamlit secrets (never commit) ---
 .streamlit/secrets.toml

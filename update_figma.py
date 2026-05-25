@@ -11,7 +11,7 @@ import json
 import os
 
 
-def update_figma(report_data: dict, config: dict):
+def update_figma(report_data: dict, config: dict, node_map: dict | None = None):
     method = config.get("figma_update_method", "plugin")
     if method == "variables":
         _update_via_variables(report_data, config)
@@ -20,19 +20,20 @@ def update_figma(report_data: dict, config: dict):
     elif method == "mcp":
         _update_via_mcp()
     else:
-        _update_via_plugin(report_data)
+        _update_via_plugin(report_data, node_map)
 
 
 # ── Method 1: Local plugin (default) ─────────────────────────────────────────
 
-def _update_via_plugin(report_data: dict):
+def _update_via_plugin(report_data: dict, node_map: dict | None = None):
     """Starts a local HTTP server. User opens the Figma dev plugin to pull and apply data."""
     import threading
     import time
     from http.server import HTTPServer, BaseHTTPRequestHandler
 
-    with open("node_map.json") as f:
-        node_map = json.load(f)
+    if node_map is None:
+        with open("node_map.json") as f:
+            node_map = json.load(f)
 
     payload = json.dumps({"report_data": report_data, "node_map": node_map}).encode()
     done_event = threading.Event()

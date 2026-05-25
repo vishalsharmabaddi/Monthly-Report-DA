@@ -14,7 +14,8 @@ from google.auth.transport.requests import Request
 SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
 
 
-def get_credentials():
+def get_credentials(token_path: str = "token.json",
+                    oauth_client_path: str = "oauth_client.json"):
     # Cloud path: build credentials directly from environment variables (no browser needed)
     refresh_token = os.environ.get("GOOGLE_REFRESH_TOKEN")
     if refresh_token:
@@ -31,15 +32,15 @@ def get_credentials():
 
     # Local path: file-based OAuth with token caching
     creds = None
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    if os.path.exists(token_path):
+        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file("oauth_client.json", SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file(oauth_client_path, SCOPES)
             creds = flow.run_local_server(port=0)
-        with open("token.json", "w") as f:
+        with open(token_path, "w") as f:
             f.write(creds.to_json())
     return creds
 
@@ -109,9 +110,12 @@ def build_dates(config):
     }
 
 
-def fetch_ga4_data(config):
+def fetch_ga4_data(config, token_path: str = "token.json",
+                   oauth_client_path: str = "oauth_client.json"):
     prop    = f"properties/{config['ga4_property_id']}"
-    client  = BetaAnalyticsDataClient(credentials=get_credentials())
+    client  = BetaAnalyticsDataClient(
+        credentials=get_credentials(token_path, oauth_client_path)
+    )
     dates   = build_dates(config)
     data    = {}
 

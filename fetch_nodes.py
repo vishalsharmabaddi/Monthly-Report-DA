@@ -4,29 +4,45 @@ Fetches all Figma text nodes and auto-maps them to report_data fields.
 Flow:
   1. Fetch complete file tree from Figma REST API
   2. Walk tree → collect every TEXT node with its parent-frame path
-  3. If report_data.json exists → content-match nodes to fields
-       Unique match  → written to node_map.json automatically
+  3. If report_data exists → content-match nodes to fields
+       Unique match  → written to node_map automatically
        Ambiguous/miss → written to nodes_output.txt for Claude to review
   4. Print summary: "Auto-mapped: 45/68. Needs review: 3"
 
+Usage:
+  py fetch_nodes.py                — shows client selector menu
+  py fetch_nodes.py makesure       — runs for a specific client
+
 Run this ONLY when the Figma template structure changes.
-For new months / new clients on the same template, run_report.py skips this step.
+For new months on the same template, run_report.py skips this step.
 """
 import json
 import os
 import sys
 import urllib.request
+from client_utils import resolve_client, get_paths, load_config, load_node_map
 
 
 # ── Figma fetch ───────────────────────────────────────────────────────────────
 
 def fetch_document(file_key: str, token: str) -> dict:
+    import time
     req = urllib.request.Request(
         f'https://api.figma.com/v1/files/{file_key}',
         headers={'X-Figma-Token': token}
     )
-    with urllib.request.urlopen(req) as res:
-        return json.loads(res.read())['document']
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req) as res:
+                return json.loads(res.read())['document']
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                wait = 60 * (attempt + 1)
+                print(f"  Rate limited by Figma. Waiting {wait}s before retry ({attempt+1}/3)...")
+                time.sleep(wait)
+            else:
+                raise
+    raise RuntimeError("Figma API rate limit exceeded after 3 retries. Wait a few minutes and try again.")
 
 
 def walk_nodes(node: dict, parent_path: list = None, result: list = None) -> list:
@@ -39,11 +55,14 @@ def walk_nodes(node: dict, parent_path: list = None, result: list = None) -> lis
     node_type = node.get('type', '')
 
     if node_type == 'TEXT':
+        bbox = node.get('absoluteBoundingBox', {})
         result.append({
             'id':          node.get('id'),
             'name':        node.get('name', ''),
             'characters':  node.get('characters', ''),
             'parent_path': parent_path[:],
+            'x':           round(bbox.get('x', 0)),
+            'y':           round(bbox.get('y', 0)),
         })
         return result
 
@@ -64,6 +83,9 @@ def walk_nodes(node: dict, parent_path: list = None, result: list = None) -> lis
 # Words that don't help disambiguate — strip these when building keyword set
 _SKIP_PARTS = {'ua', 'ga4', 'conv', 'heading', 'block', 'report', 'rate'}
 
+# Section headers that mark the start of manually-managed sections
+_MANUAL_SECTION_MARKERS = {'Google Ads Performance', 'Google Ads'}
+
 
 def _keywords(field_name: str) -> list[str]:
     """Extract meaningful keywords from a field name."""
@@ -76,6 +98,33 @@ def _path_score(field_name: str, parent_path: list[str]) -> int:
     return sum(1 for kw in _keywords(field_name) if kw in path_str)
 
 
+def _detect_ga4_boundary(all_nodes: list[dict]) -> float:
+    """
+    Find the y-coordinate where manual sections (Google Ads etc.) begin.
+    Any node at or below this y is excluded from GA4 auto-matching.
+    Returns inf if no marker found (no exclusion zone applied).
+    """
+    boundary = float('inf')
+    for node in all_nodes:
+        for marker in _MANUAL_SECTION_MARKERS:
+            if marker in node.get('characters', ''):
+                boundary = min(boundary, node['y'])
+    return boundary
+
+
+def _is_risky_value(value: str) -> bool:
+    """
+    True for short numeric values or dash — these commonly appear in multiple
+    sections and risk false matches when there is no path-score confirmation.
+    Safe to auto-match only when path_score > 0 or value is a longer string.
+    """
+    v = value.strip()
+    if not v or v == '-':
+        return True
+    digits = v.replace(',', '')
+    return digits.isdigit() and len(digits) <= 3
+
+
 def auto_match(
     all_nodes: list[dict],
     report_data: dict,
@@ -86,14 +135,21 @@ def auto_match(
 
     Strategy:
       - source=semrush/google_ads entries are always kept from existing_map.
+      - Nodes in the Google Ads section (below detected y-boundary) are excluded.
       - For each report_data field: find Figma nodes whose characters == value.
-        * 1 candidate  → direct map
+        * 1 candidate + safe value  → direct map
+        * 1 candidate + risky value → need path_score > 0, else unmatched
         * N candidates → pick best by parent-path keyword score (must be uniquely best)
         * 0 candidates or tie → add to unmatched
     """
-    # Build value → nodes lookup
+    # Layer 1: detect where manual sections start and exclude those nodes
+    ga4_boundary = _detect_ga4_boundary(all_nodes)
+
+    # Build value → nodes lookup (GA4 zone only — exclude manual sections)
     by_value: dict[str, list[dict]] = {}
     for node in all_nodes:
+        if node.get('y', 0) >= ga4_boundary:
+            continue  # skip Google Ads / manual section nodes
         ch = node['characters']
         by_value.setdefault(ch, []).append(node)
 
@@ -120,8 +176,14 @@ def auto_match(
 
         elif len(candidates) == 1:
             node = candidates[0]
-            entry = _build_entry(field, node['id'], existing_map)
-            new_map[field] = entry
+            score = _path_score(field, node['parent_path'])
+            # Layer 2: risky short values need path confirmation to avoid
+            # coincidental matches in SEMrush or other non-GA4 sections
+            if score > 0 or not _is_risky_value(value):
+                entry = _build_entry(field, node['id'], existing_map)
+                new_map[field] = entry
+            else:
+                unmatched.append(field)
 
         else:
             # Multiple nodes share the same text — use parent-path context
@@ -155,11 +217,11 @@ def _build_entry(field: str, node_id: str, existing_map: dict) -> dict:
 # ── Output helpers ─────────────────────────────────────────────────────────────
 
 def write_nodes_txt(all_nodes: list[dict], unmatched_fields: list[str],
-                    report_data: dict):
-    """Write nodes_output.txt — full dump + highlighted unmatched section."""
+                    report_data: dict, output_path: str = 'nodes_output.txt'):
+    """Write nodes_output file — full dump + highlighted unmatched section."""
     sys.stdout.reconfigure(encoding='utf-8')
 
-    with open('nodes_output.txt', 'w', encoding='utf-8') as f:
+    with open(output_path, 'w', encoding='utf-8') as f:
         # Section 1: fields that need manual mapping
         if unmatched_fields:
             f.write("=" * 60 + "\n")
@@ -177,7 +239,7 @@ def write_nodes_txt(all_nodes: list[dict], unmatched_fields: list[str],
         for n in all_nodes:
             chars = n['characters'].replace('\n', ' ').strip()
             path  = ' > '.join(n['parent_path']) if n['parent_path'] else '(root)'
-            f.write(f"{n['id']} | {repr(chars)} | {path}\n")
+            f.write(f"{n['id']} | x={n.get('x',0)} y={n.get('y',0)} | {repr(chars)} | {path}\n")
 
         f.write(f"\nTotal: {len(all_nodes)}\n")
 
@@ -185,41 +247,39 @@ def write_nodes_txt(all_nodes: list[dict], unmatched_fields: list[str],
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    # Config
-    with open('config.json') as f:
-        cfg = json.load(f)
+    client = resolve_client(sys.argv[1] if len(sys.argv) > 1 else None)
+    paths  = get_paths(client)
+    cfg    = load_config(client)
+
     token    = cfg['figma_token']
     file_key = cfg['figma_file_key']
 
+    print(f"Client : {cfg['client_name']}")
     print(f"Fetching Figma file {file_key}...")
     document  = fetch_document(file_key, token)
     all_nodes = walk_nodes(document)
     print(f"Found {len(all_nodes)} text nodes.")
 
     # Can't auto-match without report_data
-    if not os.path.exists('report_data.json'):
+    if not os.path.exists(paths['report_data']):
         print()
-        print("report_data.json not found — cannot auto-match node content.")
-        print("Run:  py fetch_ga4.py")
-        print("Then: py fetch_nodes.py")
+        print("report_data not found — cannot auto-match node content.")
+        print(f"Run:  py run_report.py {client}  (or fetch_ga4.py directly)")
         print()
-        write_nodes_txt(all_nodes, [], {})
-        print(f"All {len(all_nodes)} nodes saved to nodes_output.txt")
+        write_nodes_txt(all_nodes, [], {}, paths['nodes_output'])
+        print(f"All {len(all_nodes)} nodes saved to {paths['nodes_output']}")
         return
 
-    with open('report_data.json') as f:
+    with open(paths['report_data']) as f:
         report_data = json.load(f)
 
-    existing_map = {}
-    if os.path.exists('node_map.json'):
-        with open('node_map.json') as f:
-            existing_map = json.load(f)
+    existing_map = load_node_map(client)
 
     print("Auto-matching by content...")
     new_map, unmatched = auto_match(all_nodes, report_data, existing_map)
 
-    # Save updated node_map
-    with open('node_map.json', 'w') as f:
+    # Save updated node_map to client file
+    with open(paths['node_map'], 'w') as f:
         json.dump(new_map, f, indent=2)
 
     # Count manual-source entries (semrush etc.) — they're not "auto-matched"
@@ -236,23 +296,23 @@ def main():
         print(f"  Manual fields: {manual_count} (semrush / google_ads — kept as-is)")
     if unmatched:
         print(f"  Needs review : {len(unmatched)} fields")
-        for f in unmatched:
-            print(f"    - {f}")
+        for field in unmatched:
+            print(f"    - {field}")
     print()
 
-    write_nodes_txt(all_nodes, unmatched, report_data)
+    write_nodes_txt(all_nodes, unmatched, report_data, paths['nodes_output'])
 
     if unmatched:
-        print("nodes_output.txt updated with unmatched fields at the top.")
+        print(f"{paths['nodes_output']} updated with unmatched fields at the top.")
         print()
         print("  >> Tell Claude:")
-        print('     "Map these unmatched fields using nodes_output.txt"')
-        print("     Claude will update node_map.json for the remaining fields.")
+        print(f'     "Map these unmatched fields using {paths[\"nodes_output\"]}"')
+        print(f"     Claude will update {paths['node_map']} for the remaining fields.")
         print()
-        print("  Then run:  py run_report.py")
+        print(f"  Then run:  py run_report.py {client}")
     else:
-        print("All fields matched! node_map.json is ready.")
-        print("Run: py run_report.py")
+        print(f"All fields matched! {paths['node_map']} is ready.")
+        print(f"Run: py run_report.py {client}")
 
 
 if __name__ == '__main__':

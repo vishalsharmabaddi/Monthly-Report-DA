@@ -1,12 +1,16 @@
 """
 Monthly runner — run this every month to update the Figma report and save Excel.
-Usage: py run_report.py
+Usage:
+  py run_report.py                  — shows client selector menu
+  py run_report.py makesure         — runs for a specific client
+  py run_report.py 1800_buggies
 """
 import json
 import os
 import sys
 import urllib.request
 import urllib.parse
+from client_utils import resolve_client, get_paths, load_config, load_node_map
 
 
 NEW_TEMPLATE_MSG = """
@@ -18,7 +22,11 @@ NEW_TEMPLATE_MSG = """
   2. Open Claude Code in this project folder
   3. Run:  py fetch_nodes.py
   4. Then say to Claude:
-       "Map my Figma nodes to report fields using nodes_output.txt"
+       "Please complete our Figma node mapping:
+        1. Identify the unmatched fields from the top section of 'nodes_output.txt'.
+        2. Match them to correct Figma node IDs in 'nodes_output.txt' by comparing values in 'report_data.json' and analyzing parent frame paths.
+        3. Update ONLY these newly resolved fields in 'node_map.json', leaving already mapped fields intact.
+        4. Let me know which fields you mapped."
   5. Claude will update node_map.json automatically
   6. Re-run:  py run_report.py
   ──────────────────────────────────────────────────
@@ -28,14 +36,8 @@ NEW_TEMPLATE_MSG = """
 """
 
 
-def validate_node_map(config):
-    """Returns (is_valid, message). Checks node_map.json exists and nodes are live in Figma."""
-
-    if not os.path.exists("node_map.json"):
-        return False, NEW_TEMPLATE_MSG
-
-    with open("node_map.json") as f:
-        node_map = json.load(f)
+def validate_node_map(node_map: dict, config: dict) -> tuple[bool, str]:
+    """Returns (is_valid, message). Checks node_map exists and nodes are live in Figma."""
 
     if not node_map:
         return False, NEW_TEMPLATE_MSG
@@ -76,42 +78,43 @@ def validate_node_map(config):
 
 
 def main():
+    client = resolve_client(sys.argv[1] if len(sys.argv) > 1 else None)
+    paths  = get_paths(client)
+    config = load_config(client)
+
     print("=" * 50)
     print("Monthly Report Automation")
     print("=" * 50)
-
-    # ── Load config ───────────────────────────────
-    with open("config.json") as f:
-        config = json.load(f)
-
     print(f"Client  : {config['client_name']}")
     print(f"Report  : {config['report_month']} {config['report_year']}")
     print()
 
     # ── Step 0: Validate node map ─────────────────
     print("[0/3] Checking Figma node map...")
-    valid, msg = validate_node_map(config)
+    node_map = load_node_map(client)
+    valid, msg = validate_node_map(node_map, config)
     if not valid:
         print()
         print("=" * 50)
         print("  NEW TEMPLATE DETECTED")
         print("=" * 50)
         print(msg)
+        print(f"  Run:  py fetch_nodes.py {client}")
         sys.exit(0)
-    print("      node_map.json is valid. Ready to update Figma.")
+    print("      node_map is valid. Ready to update Figma.")
     print()
 
     # ── Step 1: Fetch GA4 data ─────────────────────
-    if not os.path.exists("oauth_client.json"):
-        print("ERROR: oauth_client.json not found.")
-        print("Download it from Google Cloud Console → Credentials → OAuth 2.0 Client.")
+    if not os.path.exists(paths['oauth_client']):
+        print(f"ERROR: {paths['oauth_client']} not found.")
+        print("Download from Google Cloud Console → Credentials → OAuth 2.0 Client.")
         sys.exit(1)
 
     print("[1/3] Fetching GA4 data...")
     from fetch_ga4 import fetch_ga4_data
-    report_data = fetch_ga4_data(config)
+    report_data = fetch_ga4_data(config, paths['token'], paths['oauth_client'])
 
-    with open("report_data.json", "w") as f:
+    with open(paths['report_data'], "w") as f:
         json.dump(report_data, f, indent=2)
     print(f"      {len(report_data)} fields fetched.")
 
@@ -119,8 +122,7 @@ def main():
     print()
     print("[2/3] Updating Figma...")
     from update_figma import update_figma
-    update_figma(report_data, config)
-    # TODO: Chunk 2 will rewrite update_figma.py with plugin/MCP/variables support
+    update_figma(report_data, config, node_map)
 
     # ── Step 3: Export to Excel ───────────────────
     print("[3/3] Exporting to Excel...")

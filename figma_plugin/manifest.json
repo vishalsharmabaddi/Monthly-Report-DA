@@ -1,0 +1,12 @@
+{
+  "name": "Report Updater",
+  "id": "report-updater-local-dev",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["http://localhost:5555"],
+    "reasoning": "Fetches monthly report data from local Python pipeline server"
+  }
+}
