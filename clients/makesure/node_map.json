@@ -1,292 +1,70 @@
 {
-  "report_month_year": {
-    "node_id": "1:212",
-    "type": "simple"
-  },
-
-  "ga4_sessions_heading": {
-    "node_id": "1:192",
-    "type": "simple"
-  },
-  "ga4_current_block": {
-    "node_id": "1:230",
-    "type": "simple"
-  },
-
-  "ga4_prev_year_sessions": {
-    "node_id": "1:233",
-    "type": "simple"
-  },
-  "ga4_prev_year_users": {
-    "node_id": "1:234",
-    "type": "simple"
-  },
-  "ga4_prev_year_bounce": {
-    "node_id": "1:235",
-    "type": "simple"
-  },
-  "ga4_prev_year_conversion": {
-    "node_id": "1:236",
-    "type": "simple"
-  },
-
-  "ga4_12mo_sessions": {
-    "node_id": "1:239",
-    "type": "simple"
-  },
-  "ga4_12mo_users": {
-    "node_id": "1:240",
-    "type": "simple"
-  },
-  "ga4_12mo_bounce": {
-    "node_id": "1:241",
-    "type": "simple"
-  },
-  "ga4_12mo_conversion": {
-    "node_id": "1:242",
-    "type": "simple"
-  },
-
-  "organic_sessions": {
-    "node_id": "1:251",
-    "type": "simple"
-  },
-  "organic_new_users": {
-    "node_id": "1:247",
-    "type": "simple"
-  },
-  "organic_bounce_rate": {
-    "node_id": "1:248",
-    "type": "simple"
-  },
-  "organic_avg_duration": {
-    "node_id": "1:249",
-    "type": "simple"
-  },
-
-  "ua_total_users": {
-    "node_id": "1:323",
-    "type": "simple"
-  },
-  "ua_total_new_users": {
-    "node_id": "1:328",
-    "type": "simple"
-  },
-  "ua_total_returning_users": {
-    "node_id": "1:329",
-    "type": "simple"
-  },
-  "ua_total_key_events": {
-    "node_id": "1:330",
-    "type": "simple"
-  },
-
-  "ua_organic_total": {
-    "node_id": "1:290",
-    "type": "simple"
-  },
-  "ua_organic_new": {
-    "node_id": "1:307",
-    "type": "simple"
-  },
-  "ua_organic_returning": {
-    "node_id": "1:308",
-    "type": "simple"
-  },
-  "ua_organic_key_events": {
-    "node_id": "1:309",
-    "type": "simple"
-  },
-
-  "ua_direct_total": {
-    "node_id": "1:291",
-    "type": "simple"
-  },
-  "ua_direct_new": {
-    "node_id": "1:304",
-    "type": "simple"
-  },
-  "ua_direct_returning": {
-    "node_id": "1:305",
-    "type": "simple"
-  },
-  "ua_direct_key_events": {
-    "node_id": "1:306",
-    "type": "simple"
-  },
-
-  "ua_organic_social_total": {
-    "node_id": "1:296",
-    "type": "simple"
-  },
-  "ua_organic_social_new": {
-    "node_id": "1:297",
-    "type": "simple"
-  },
-  "ua_organic_social_returning": {
-    "node_id": "1:298",
-    "type": "simple"
-  },
-  "ua_organic_social_key_events": {
-    "node_id": "1:299",
-    "type": "simple"
-  },
-
-  "ua_referral_total": {
-    "node_id": "1:300",
-    "type": "simple"
-  },
-  "ua_referral_new": {
-    "node_id": "1:301",
-    "type": "simple"
-  },
-  "ua_referral_returning": {
-    "node_id": "1:302",
-    "type": "simple"
-  },
-  "ua_referral_key_events": {
-    "node_id": "1:303",
-    "type": "simple"
-  },
-
-  "ua_unassigned_total": {
-    "node_id": "1:313",
-    "type": "simple"
-  },
-  "ua_unassigned_new": {
-    "node_id": "1:314",
-    "type": "simple"
-  },
-  "ua_unassigned_returning": {
-    "node_id": "1:315",
-    "type": "simple"
-  },
-  "ua_unassigned_key_events": {
-    "node_id": "1:316",
-    "type": "simple"
-  },
-
-  "conv_organic_current": {
-    "node_id": "1:360",
-    "type": "simple"
-  },
-  "conv_organic_prev_year": {
-    "node_id": "1:361",
-    "type": "simple"
-  },
-  "conv_organic_12mo": {
-    "node_id": "1:385",
-    "type": "simple"
-  },
-
-  "conv_unassigned_current": {
-    "node_id": "1:365",
-    "type": "simple"
-  },
-  "conv_unassigned_prev_year": {
-    "node_id": "1:366",
-    "type": "simple"
-  },
-  "conv_unassigned_12mo": {
-    "node_id": "1:386",
-    "type": "simple"
-  },
-
-  "conv_paid_current": {
-    "node_id": "1:369",
-    "type": "simple"
-  },
-  "conv_paid_prev_year": {
-    "node_id": "1:370",
-    "type": "simple"
-  },
-  "conv_paid_12mo": {
-    "node_id": "1:387",
-    "type": "simple"
-  },
-
-  "conv_direct_current": {
-    "node_id": "1:376",
-    "type": "simple"
-  },
-  "conv_direct_prev_year": {
-    "node_id": "1:377",
-    "type": "simple"
-  },
-  "conv_direct_12mo": {
-    "node_id": "1:388",
-    "type": "simple"
-  },
-
-  "conv_referral_current": {
-    "node_id": "1:395",
-    "type": "simple"
-  },
-  "conv_referral_prev_year": {
-    "node_id": "1:396",
-    "type": "simple"
-  },
-  "conv_referral_avg12mo": {
-    "node_id": "1:397",
-    "type": "simple"
-  },
-
-  "conv_social_current": {
-    "node_id": "1:389",
-    "type": "simple"
-  },
-  "conv_social_prev_year": {
-    "node_id": "1:391",
-    "type": "simple"
-  },
-  "conv_social_12mo": {
-    "node_id": "1:393",
-    "type": "simple"
-  },
-
-  "conv_total_current": {
-    "node_id": "1:383",
-    "type": "simple"
-  },
-  "conv_total_prev_year": {
-    "node_id": "1:384",
-    "type": "simple"
-  },
-  "conv_total_12mo": {
-    "node_id": "1:398",
-    "type": "simple"
-  },
-
-  "social_facebook_current": {
-    "node_id": "1:278",
-    "type": "simple"
-  },
-  "social_facebook_prev": {
-    "node_id": "1:283",
-    "type": "simple"
-  },
-  "social_pinterest_current": {
-    "node_id": "1:279",
-    "type": "simple"
-  },
-  "social_pinterest_prev": {
-    "node_id": "1:285",
-    "type": "simple"
-  },
-  "social_instagram_current": {
-    "node_id": "1:280",
-    "type": "simple"
-  },
-  "social_instagram_prev": {
-    "node_id": "1:284",
-    "type": "simple"
-  },
-  "social_linkedin_current": {
-    "node_id": "1:281",
-    "type": "simple"
-  },
-  "social_linkedin_prev": {
-    "node_id": "1:286",
-    "type": "simple"
-  }
+  "ga4_sessions_heading":        {"node_id": "12:32"},
+  "report_month_year":           {"node_id": "12:27"},
+  "ga4_current_block":           {"node_id": "12:34"},
+  "ga4_prev_year_sessions":      {"node_id": "12:37"},
+  "ga4_prev_year_users":         {"node_id": "12:38"},
+  "ga4_prev_year_bounce":        {"node_id": "12:39"},
+  "ga4_prev_year_conversion":    {"node_id": "12:40"},
+  "ga4_12mo_sessions":           {"node_id": "12:43"},
+  "ga4_12mo_users":              {"node_id": "12:44"},
+  "ga4_12mo_bounce":             {"node_id": "12:45"},
+  "ga4_12mo_conversion":         {"node_id": "12:46"},
+  "organic_sessions":            {"node_id": "12:55"},
+  "organic_new_users":           {"node_id": "12:51"},
+  "organic_bounce_rate":         {"node_id": "12:52"},
+  "organic_avg_duration":        {"node_id": "12:53"},
+  "ua_direct_total":             {"node_id": "12:97"},
+  "ua_direct_new":               {"node_id": "12:111"},
+  "ua_direct_returning":         {"node_id": "12:112"},
+  "ua_direct_key_events":        {"node_id": "12:113"},
+  "ua_organic_total":            {"node_id": "12:96"},
+  "ua_organic_new":              {"node_id": "12:114"},
+  "ua_organic_returning":        {"node_id": "12:115"},
+  "ua_organic_key_events":       {"node_id": "12:116"},
+  "ua_unassigned_total":         {"node_id": "12:125"},
+  "ua_unassigned_new":           {"node_id": "12:126"},
+  "ua_unassigned_returning":     {"node_id": "12:127"},
+  "ua_unassigned_key_events":    {"node_id": "12:128"},
+  "ua_referral_total":           {"node_id": "12:106"},
+  "ua_referral_new":             {"node_id": "12:107"},
+  "ua_referral_returning":       {"node_id": "12:108"},
+  "ua_referral_key_events":      {"node_id": "12:109"},
+  "ua_organic_social_total":     {"node_id": "12:102"},
+  "ua_organic_social_new":       {"node_id": "12:103"},
+  "ua_organic_social_returning": {"node_id": "12:104"},
+  "ua_organic_social_key_events":{"node_id": "12:105"},
+  "ua_total_users":              {"node_id": "12:148"},
+  "ua_total_new_users":          {"node_id": "12:153"},
+  "ua_total_returning_users":    {"node_id": "12:154"},
+  "ua_total_key_events":         {"node_id": "12:155"},
+  "conv_organic_current":        {"node_id": "12:188"},
+  "conv_organic_prev_year":      {"node_id": "12:189"},
+  "conv_organic_12mo":           {"node_id": "12:213"},
+  "conv_unassigned_current":     {"node_id": "12:193"},
+  "conv_unassigned_prev_year":   {"node_id": "12:194"},
+  "conv_unassigned_12mo":        {"node_id": "12:214"},
+  "conv_paid_current":           {"node_id": "12:197"},
+  "conv_paid_prev_year":         {"node_id": "12:198"},
+  "conv_paid_12mo":              {"node_id": "12:215"},
+  "conv_direct_current":         {"node_id": "12:204"},
+  "conv_direct_prev_year":       {"node_id": "12:205"},
+  "conv_direct_12mo":            {"node_id": "12:216"},
+  "conv_social_current":         {"node_id": "12:225"},
+  "conv_social_prev_year":       {"node_id": "12:226"},
+  "conv_social_12mo":            {"node_id": "12:224"},
+  "conv_referral_current":       {"node_id": "12:236"},
+  "conv_referral_prev_year":     {"node_id": "12:237"},
+  "conv_referral_avg12mo":       {"node_id": "12:235"},
+  "conv_total_current":          {"node_id": "12:240"},
+  "conv_total_prev_year":        {"node_id": "12:241"},
+  "conv_total_12mo":             {"node_id": "12:242"},
+  "social_facebook_current":     {"node_id": "12:77"},
+  "social_facebook_prev":        {"node_id": "12:82"},
+  "social_instagram_current":    {"node_id": "12:79"},
+  "social_instagram_prev":       {"node_id": "12:84"},
+  "social_pinterest_current":    {"node_id": "12:78"},
+  "social_pinterest_prev":       {"node_id": "12:83"},
+  "social_linkedin_current":     {"node_id": "12:80"},
+  "social_linkedin_prev":        {"node_id": "12:85"}
 }

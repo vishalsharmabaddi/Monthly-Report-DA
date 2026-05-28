@@ -331,20 +331,28 @@ st.divider()
 # ── Shared pipeline steps (used by both individual buttons and Run All) ────────
 
 def step_fetch_ga4(cfg: dict) -> dict | None:
+    from client_utils import get_paths
+    paths = get_paths(_client_slug(cfg))
+
     has_cloud_auth = bool(os.environ.get("GOOGLE_REFRESH_TOKEN") or _secret("GOOGLE_REFRESH_TOKEN"))
-    if not has_cloud_auth and not os.path.exists("oauth_client.json"):
-        st.error("oauth_client.json not found. Download from Google Cloud Console.")
+    if not has_cloud_auth and not os.path.exists(paths['oauth_client']):
+        st.error(
+            f"`{paths['oauth_client']}` not found.\n\n"
+            "Download from Google Cloud Console → Credentials → OAuth 2.0 Client (Desktop), "
+            f"then place it in `{paths['oauth_client']}`."
+        )
         return None
     try:
-        # Inject cloud Google secrets into env so fetch_ga4.get_credentials() picks them up
         for key in ("GOOGLE_REFRESH_TOKEN", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"):
             val = _secret(key)
             if val:
                 os.environ[key] = val
         sys.path.insert(0, str(Path(__file__).parent))
         from fetch_ga4 import fetch_ga4_data
-        report_data = fetch_ga4_data(cfg)
-        with open("report_data.json", "w") as f:
+        if not os.path.exists(paths['token']) and not has_cloud_auth:
+            st.info("Browser window khulega — Google account se login karo. Ek baar hi karna hai.")
+        report_data = fetch_ga4_data(cfg, paths['token'], paths['oauth_client'])
+        with open(paths['report_data'], "w") as f:
             json.dump(report_data, f, indent=2)
         st.session_state["report_data"] = report_data
         return report_data
@@ -371,11 +379,15 @@ def step_push_figma(cfg: dict, report_data: dict) -> bool:
             ">> Open Figma → Plugins → Report Updater → **Fetch & Update All Nodes**"
         )
 
+    # Load node_map from the correct client folder
+    from client_utils import load_node_map
+    node_map = load_node_map(_client_slug(cfg))
+
     buf = io.StringIO()
     try:
         from update_figma import update_figma
         with contextlib.redirect_stdout(buf):
-            update_figma(report_data, cfg)
+            update_figma(report_data, cfg, node_map)
     except Exception as e:
         st.error(f"Figma error: {e}")
         return False
@@ -427,7 +439,7 @@ col1, col2, col3, col4 = st.columns(4)
 with col1:
     if st.button("Fetch GA4 Data", use_container_width=True, type="primary"):
         with st.spinner("Fetching GA4 data..."):
-            step_fetch_ga4(cfg)
+            step_fetch_ga4(live_cfg)
 
 # ── Push to Figma ────────────────
 with col2:
@@ -437,9 +449,9 @@ with col2:
         else:
             with open("report_data.json") as f:
                 report_data = json.load(f)
-            label = "Waiting for Figma plugin..." if cfg.get("figma_update_method") == "plugin" else "Pushing to Figma..."
+            label = "Waiting for Figma plugin..." if live_cfg.get("figma_update_method") == "plugin" else "Pushing to Figma..."
             with st.spinner(label):
-                step_push_figma(cfg, report_data)
+                step_push_figma(live_cfg, report_data)
 
 # ── Export Excel ─────────────────
 with col3:
@@ -449,7 +461,7 @@ with col3:
         else:
             with open("report_data.json") as f:
                 report_data = json.load(f)
-            step_export_excel(cfg, report_data)
+            step_export_excel(live_cfg, report_data)
 
 # ── Rebuild Node Map ─────────────
 with col4:
@@ -457,19 +469,53 @@ with col4:
         st.session_state["show_node_map_help"] = True
 
 if st.session_state.get("show_node_map_help"):
-    st.info(
-        "**Only needed when the Figma template structure changes.**\n\n"
-        "1. Run in terminal: `py fetch_nodes.py`\n"
-        "2. Tell Claude:\n\n"
-        "   *\"Please complete our Figma node mapping:\n"
-        "   1. Identify the unmatched fields from the top section of 'nodes_output.txt'.\n"
-        "   2. Match them to correct Figma node IDs in 'nodes_output.txt' by comparing values in 'report_data.json' and analyzing parent frame paths.\n"
-        "   3. Update ONLY these newly resolved fields in 'node_map.json', leaving already mapped fields intact.\n"
-        "   4. Let me know which fields you mapped.\"*\n\n"
-        "3. Claude updates `node_map.json` automatically\n"
-        "4. Re-run the pipeline\n\n"
-        "For new months or new clients using the same template, this is skipped automatically."
+    import subprocess
+    from client_utils import get_paths
+    _slug = _client_slug(live_cfg)
+    try:
+        paths = get_paths(_slug)
+        nodes_path = paths["nodes_output"]
+        node_map_path = paths["node_map"]
+        report_path = paths["report_data"]
+    except Exception:
+        nodes_path = "clients/<client>/nodes_output.txt"
+        node_map_path = "clients/<client>/node_map.json"
+        report_path = "clients/<client>/report_data.json"
+
+    claude_prompt = (
+        f'Read these 3 files: "{nodes_path}", "{node_map_path}", "{report_path}".\n'
+        f'The top section of nodes_output.txt lists UNMATCHED FIELDS with their expected values.\n'
+        f'The bottom section lists ALL TEXT NODES in format: "nodeId | x=N y=N | \'content\' | framePath"\n'
+        f'For each unmatched field: find the node whose content matches the field\'s expected value.\n'
+        f'If no exact match, use the frame path context (section name, position) to identify the correct node.\n'
+        f'Add each resolved field to "{node_map_path}" in format: {{"field_name": {{"node_id": "12:34"}}}}\n'
+        f'Do NOT remove or change any existing entries in node_map.json.\n'
+        f'Reply with a summary of how many fields you mapped and which ones could not be resolved.'
     )
+
+    st.info("**Only needed when the Figma template structure changes.**\n\nDo these 3 steps in order:")
+
+    st.markdown("**Step 1 — Fetch all Figma nodes**")
+    if st.button("Run Fetch Nodes", use_container_width=True, key="btn_fetch_nodes"):
+        with st.spinner(f"Fetching Figma nodes for {live_cfg['client_name']}..."):
+            result = subprocess.run(
+                ["py", "fetch_nodes.py", _slug],
+                capture_output=True, text=True, encoding="utf-8",
+                cwd=str(Path(__file__).parent)
+            )
+        if result.returncode == 0:
+            st.success("Fetch complete!")
+            st.code(result.stdout or "(no output)")
+        else:
+            st.error("Fetch failed.")
+            st.code(result.stderr or result.stdout or "(no output)")
+
+    st.markdown("**Step 2 — Copy this prompt to Claude Code**")
+    st.code(claude_prompt, language=None)
+
+    st.markdown("**Step 3 — Re-run the pipeline**")
+    st.caption("After Claude updates node_map.json, use Run Full Pipeline above.")
+    st.caption("For new months on the same template, this entire section is skipped automatically.")
 
 st.divider()
 
@@ -482,20 +528,20 @@ with st.expander("Run Full Pipeline — Fetch GA4 + Push Figma + Export Excel", 
 
         st.markdown("**Step 1 / 3 — Fetch GA4 Data**")
         with st.spinner("Fetching GA4 data..."):
-            report_data = step_fetch_ga4(cfg)
+            report_data = step_fetch_ga4(live_cfg)
         if report_data is None:
             st.stop()
 
         st.markdown("**Step 2 / 3 — Push to Figma**")
-        method = cfg.get("figma_update_method", "plugin")
+        method = live_cfg.get("figma_update_method", "plugin")
         label = "Waiting for Figma plugin..." if method == "plugin" else "Pushing to Figma..."
         with st.spinner(label):
-            ok = step_push_figma(cfg, report_data)
+            ok = step_push_figma(live_cfg, report_data)
         if not ok:
             st.stop()
 
         st.markdown("**Step 3 / 3 — Export Excel**")
-        step_export_excel(cfg, report_data)
+        step_export_excel(live_cfg, report_data)
 
         st.success("Pipeline complete.")
 

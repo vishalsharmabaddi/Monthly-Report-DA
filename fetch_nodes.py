@@ -305,9 +305,19 @@ def main():
     if unmatched:
         print(f"{paths['nodes_output']} updated with unmatched fields at the top.")
         print()
-        print("  >> Tell Claude:")
-        print(f'     "Map these unmatched fields using {paths[\"nodes_output\"]}"')
-        print(f"     Claude will update {paths['node_map']} for the remaining fields.")
+        nodes_path = paths['nodes_output']
+        node_map_path = paths['node_map']
+        report_path = paths['report_data']
+        print("  >> Copy-paste this prompt to Claude:")
+        print()
+        print(f'  Read these 3 files: "{nodes_path}", "{node_map_path}", "{report_path}".')
+        print(f'  The top section of nodes_output.txt lists UNMATCHED FIELDS with their expected values.')
+        print(f'  The bottom section lists ALL TEXT NODES in format: "nodeId | x=N y=N | \'content\' | framePath"')
+        print(f'  For each unmatched field: find the node whose content matches the field\'s expected value.')
+        print(f'  If no exact match, use the frame path context (section name, position) to identify the correct node.')
+        print(f'  Add each resolved field to "{node_map_path}" in format: {{"field_name": {{"node_id": "12:34"}}}}')
+        print(f'  Do NOT remove or change any existing entries in node_map.json.')
+        print(f'  Reply with a summary of how many fields you mapped and which ones could not be resolved.')
         print()
         print(f"  Then run:  py run_report.py {client}")
     else:

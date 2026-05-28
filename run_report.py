@@ -122,7 +122,8 @@ def main():
     print()
     print("[2/3] Updating Figma...")
     from update_figma import update_figma
-    update_figma(report_data, config, node_map)
+    figma_vars_path = paths['config'].replace("config.json", "figma_vars.json")
+    update_figma(report_data, config, node_map, figma_vars_path)
 
     # ── Step 3: Export to Excel ───────────────────
     print("[3/3] Exporting to Excel...")

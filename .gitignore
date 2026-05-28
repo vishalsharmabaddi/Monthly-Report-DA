@@ -1,43 +1,44 @@
-# --- Sensitive / Credentials ---
+# ── Credentials & tokens (NEVER commit) ──────────────────────────────────────
 token.json
 oauth_client.json
 config.json
 credientals.json
 credentials.json
-figma_vars.json
+
+# Per-client sensitive files
+clients/*/config.json
+clients/*/token.json
+clients/*/oauth_client.json
+clients/*/report_data.json
+clients/*/nodes_output.txt
+
+# ── All JSON blocked by default; specific files un-ignored below ──────────────
 *.json
-check.md
-info.md
 
-# --- Keep these JSON files ---
+# Keep these JSON files
 !node_map.json
-!figma_vars.json
+!clients/*/node_map.json
 !figma_plugin/manifest.json
+!.devcontainer/devcontainer.json
 
-# --- Streamlit secrets (never commit) ---
+# ── Streamlit secrets ─────────────────────────────────────────────────────────
 .streamlit/secrets.toml
 
-# --- Per-client node maps (contain Figma node IDs, keep in git) ---
-!clients/
+# ── Generated / output ────────────────────────────────────────────────────────
+report_data.json
+nodes_output.txt
+data/
 
-# --- Python cache ---
+# ── Python cache ──────────────────────────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
 
-# --- Generated output ---
-report_data.json
-nodes_output.txt
-
-
-# --- Excel output ---
-data/
-
-# --- Documentation (local only, except README) ---
+# ── Docs (local only, README is the exception) ───────────────────────────────
 *.md
 !README.md
 
-# --- OS / Editor ---
+# ── OS / Editor ───────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 .vscode/

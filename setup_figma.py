@@ -1,16 +1,21 @@
 """
-Run ONCE to create Figma string variables for every report field.
-Saves variable IDs to figma_vars.json — needed by run_report.py each month.
-After this, open Figma desktop and let Claude bind the text nodes (one-time step).
+Run ONCE per client to create Figma string variables for every report field.
+Saves variable IDs to clients/{client}/figma_vars.json — needed by run_report.py each month.
+After this, open Figma desktop and bind text nodes to variables (one-time step).
+
+Usage:
+  py setup_figma.py               — shows client selector menu
+  py setup_figma.py makesure      — runs for a specific client
 """
 import json
+import sys
 import requests
+from client_utils import resolve_client, get_paths, load_config, load_node_map
 
-with open("config.json") as f:
-    config = json.load(f)
-
-with open("node_map.json") as f:
-    node_map = json.load(f)
+client   = resolve_client(sys.argv[1] if len(sys.argv) > 1 else None)
+paths    = get_paths(client)
+config   = load_config(client)
+node_map = load_node_map(client)
 
 TOKEN    = config["figma_token"]
 FILE_KEY = config["figma_file_key"]
@@ -79,12 +84,16 @@ output = {
     "variables":     var_id_map,
 }
 
-with open("figma_vars.json", "w") as f:
+figma_vars_path = paths["config"].replace("config.json", "figma_vars.json")
+with open(figma_vars_path, "w") as f:
     json.dump(output, f, indent=2)
 
 print(f"Done! Created {len(var_id_map)} Figma variables.")
 print(f"Collection ID : {collection_id}")
 print(f"Mode ID       : {mode_id}")
-print(f"Saved to figma_vars.json")
+print(f"Saved to      : {figma_vars_path}")
 print()
-print("Next step: open Figma desktop and tell Claude to bind the text nodes.")
+print("Next steps:")
+print("  1. Open Figma → each text node → bind to its variable (one-time)")
+print("  2. Set figma_update_method = 'variables' in config.json")
+print(f"  3. Run: py run_report.py {client}")

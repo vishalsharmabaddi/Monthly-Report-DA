@@ -11,12 +11,13 @@ import json
 import os
 
 
-def update_figma(report_data: dict, config: dict, node_map: dict | None = None):
+def update_figma(report_data: dict, config: dict, node_map: dict | None = None,
+                 figma_vars_path: str = "figma_vars.json"):
     method = config.get("figma_update_method", "plugin")
     if method == "variables":
-        _update_via_variables(report_data, config)
+        _update_via_variables(report_data, config, figma_vars_path)
     elif method == "claude_api":
-        _update_via_claude_api(report_data, config)
+        _update_via_claude_api(report_data, config, figma_vars_path)
     elif method == "mcp":
         _update_via_mcp()
     else:
@@ -92,7 +93,7 @@ def _update_via_mcp():
 
 # ── Method 3: Figma Variables API (paid plan) ─────────────────────────────────
 
-def _update_via_variables(report_data: dict, config: dict):
+def _update_via_variables(report_data: dict, config: dict, figma_vars_path: str = "figma_vars.json"):
     """Uses Figma REST Variables API. Requires paid Figma plan + figma_vars.json."""
     try:
         import requests
@@ -100,12 +101,12 @@ def _update_via_variables(report_data: dict, config: dict):
         print("      ERROR: 'requests' not installed. Run: pip install requests")
         return
 
-    if not os.path.exists("figma_vars.json"):
-        print("      ERROR: figma_vars.json not found.")
+    if not os.path.exists(figma_vars_path):
+        print(f"      ERROR: {figma_vars_path} not found.")
         print("      Run: py setup_figma.py  (requires paid Figma plan)")
         return
 
-    with open("figma_vars.json") as f:
+    with open(figma_vars_path) as f:
         figma_vars = json.load(f)
 
     TOKEN    = config["figma_token"]
