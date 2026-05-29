@@ -1,0 +1,15 @@
+name: Keep Render App Alive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # every 10 minutes
+  workflow_dispatch:           # manual trigger anytime
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping app
+        run: |
+          curl -s -o /dev/null -w "Status: %{http_code}" ${{ secrets.RENDER_APP_URL }}
+          echo " — app pinged at $(date)"
