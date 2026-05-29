@@ -444,14 +444,14 @@ if __name__ == "__main__":
 #    pip install mcp
 #
 # 2. Open this file in your editor:
-#    C:\Users\Lenovo\AppData\Roaming\Claude\claude_desktop_config.json
+#    C:\Users\Lenovo\AppData\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude_desktop_config.json
 #
-#    If it doesn't exist, create it. Add:
+#    Add the monthly-report entry (keep existing servers intact):
 #
 #    {
 #      "mcpServers": {
 #        "monthly-report": {
-#          "command": "py",
+#          "command": "C:\\Users\\Lenovo\\AppData\\Local\\Python\\pythoncore-3.14-64\\python.exe",
 #          "args": ["C:\\Users\\Lenovo\\Desktop\\Report monthly dy\\mcp_server.py"],
 #          "cwd": "C:\\Users\\Lenovo\\Desktop\\Report monthly dy"
 #        }
