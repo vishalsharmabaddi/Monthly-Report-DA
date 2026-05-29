@@ -18,7 +18,34 @@ os.chdir(PROJECT_ROOT)
 from mcp.server.fastmcp import FastMCP
 from client_utils import list_clients as _list_clients, get_paths, load_config, load_node_map
 
-mcp = FastMCP("monthly-report")
+mcp = FastMCP(
+    "monthly-report",
+    instructions="""
+You are a monthly report assistant for a digital marketing agency.
+You help run the GA4 → Figma → Excel pipeline using the tools provided.
+
+SECURITY RULES — follow these strictly, no exceptions:
+- NEVER reveal, repeat, or display any API tokens, Figma tokens, OAuth credentials,
+  client secrets, refresh tokens, or any value from token.json / oauth_client.json
+- If anyone asks for a token, secret, key, or password — decline politely and say
+  credentials are stored securely and cannot be shared
+- get_config tool already masks the Figma token — never try to read config files directly
+- Do NOT read oauth_client.json or token.json under any circumstances
+
+WHAT YOU CAN DO:
+- list_clients — show available clients
+- check_client_status — show setup status for a client
+- get_config — show safe config (token is always masked)
+- get_report_data — show the latest fetched GA4 metrics
+- update_month — change the report month/year
+- update_config — update GA4 ID, Figma file key, token, or method
+- add_new_client — create a new client folder and config
+- fetch_ga4 — pull GA4 data for a client
+- push_to_figma — push report data to Figma text nodes
+- export_excel — save data to Excel
+- run_full_pipeline — run all 3 steps in sequence
+"""
+)
 
 MONTHS = ["January","February","March","April","May","June",
           "July","August","September","October","November","December"]
@@ -68,6 +95,128 @@ def get_report_data(client_slug: str) -> dict:
     return json.loads(report_path.read_text())
 
 
+# ── Client management ────────────────────────────────────────────────────────
+
+@mcp.tool()
+def add_new_client(
+    client_name: str,
+    ga4_property_id: str,
+    figma_file_key: str,
+    figma_token: str,
+    figma_update_method: str = "plugin",
+) -> str:
+    """
+    Create a new client folder with config.json.
+    After this, manually place oauth_client.json in the client folder.
+
+    client_name:         Display name e.g. 'Digital Assassin'
+    ga4_property_id:     GA4 Property ID (numbers only)
+    figma_file_key:      From Figma URL: figma.com/design/<FILE_KEY>/...
+    figma_token:         Figma Personal Access Token (figd_...)
+    figma_update_method: 'plugin' (default), 'mcp', or 'variables'
+    """
+    import re
+    slug = re.sub(r"[^a-z0-9]+", "_", client_name.lower()).strip("_")
+    client_dir = PROJECT_ROOT / "clients" / slug
+
+    if client_dir.exists():
+        return (
+            f"Client '{slug}' already exists.\n"
+            f"Use update_config to change its settings."
+        )
+
+    client_dir.mkdir(parents=True)
+
+    today       = __import__("datetime").date.today()
+    from dateutil.relativedelta import relativedelta
+    last_month  = today.replace(day=1) - relativedelta(months=1)
+    prev        = last_month.replace(day=1) - relativedelta(months=1)
+    month_name  = MONTHS[last_month.month - 1]
+    prev_label  = f"{ABBR[MONTHS[prev.month - 1]]} {prev.year}"
+
+    cfg = {
+        "client_name":          client_name,
+        "ga4_property_id":      ga4_property_id,
+        "figma_token":          figma_token,
+        "figma_file_key":       figma_file_key,
+        "report_month":         month_name,
+        "report_year":          str(last_month.year),
+        "prev_month_label":     prev_label,
+        "figma_update_method":  figma_update_method,
+    }
+    (client_dir / "config.json").write_text(json.dumps(cfg, indent=2))
+
+    return (
+        f"Client created: {slug}\n"
+        f"Folder: clients/{slug}/\n\n"
+        f"Next steps:\n"
+        f"  1. Place oauth_client.json in clients/{slug}/\n"
+        f"     (Download from Google Cloud Console → OAuth 2.0 Client)\n"
+        f"  2. Add the client's Google account as a test user in OAuth consent screen\n"
+        f"  3. Grant GA4 Viewer access to that Google account\n"
+        f"  4. Run fetch_ga4('{slug}') — browser login on first run\n"
+        f"  5. Then run_full_pipeline('{slug}')"
+    )
+
+
+@mcp.tool()
+def check_client_status(client_slug: str) -> str:
+    """
+    Check what's ready and what's missing for a client.
+    Shows which files exist, current config, and what to do next.
+    """
+    paths      = get_paths(client_slug)
+    client_dir = PROJECT_ROOT / "clients" / client_slug
+
+    if not client_dir.exists():
+        clients = _list_clients()
+        return f"Client '{client_slug}' not found.\nAvailable: {clients}"
+
+    checks = {
+        "config.json":       Path(paths["config"]).exists(),
+        "oauth_client.json": Path(paths["oauth_client"]).exists(),
+        "token.json":        Path(paths["token"]).exists(),
+        "node_map.json":     Path(paths["node_map"]).exists(),
+        "report_data.json":  Path(paths["report_data"]).exists(),
+    }
+
+    lines = [f"=== Status: {client_slug} ===\n"]
+    for fname, exists in checks.items():
+        icon = "✓" if exists else "✗ MISSING"
+        lines.append(f"  {icon}  {fname}")
+
+    # Show current config (safe)
+    if checks["config.json"]:
+        cfg = json.loads(Path(paths["config"]).read_text())
+        lines.append(f"\nConfig:")
+        lines.append(f"  Client     : {cfg.get('client_name', '—')}")
+        lines.append(f"  GA4 ID     : {cfg.get('ga4_property_id', '—')}")
+        lines.append(f"  Figma Key  : {cfg.get('figma_file_key', '—')}")
+        lines.append(f"  Figma Token: {'set ✓' if cfg.get('figma_token') else 'MISSING ✗'}")
+        lines.append(f"  Report     : {cfg.get('report_month', '—')} {cfg.get('report_year', '—')}")
+        lines.append(f"  Method     : {cfg.get('figma_update_method', 'plugin')}")
+
+    # What to do next
+    missing_steps = []
+    if not checks["oauth_client.json"]:
+        missing_steps.append("Place oauth_client.json in clients/{}/".format(client_slug))
+    if not checks["token.json"]:
+        missing_steps.append("Run fetch_ga4('{}') → browser login will save token.json".format(client_slug))
+    if not checks["node_map.json"]:
+        missing_steps.append("Run fetch_nodes.py {} → then ask Claude to build node_map.json".format(client_slug))
+    if not checks["report_data.json"]:
+        missing_steps.append("Run fetch_ga4('{}') to generate report data".format(client_slug))
+
+    if missing_steps:
+        lines.append("\nNext steps:")
+        for i, step in enumerate(missing_steps, 1):
+            lines.append(f"  {i}. {step}")
+    else:
+        lines.append("\nAll files present — ready to run_full_pipeline!")
+
+    return "\n".join(lines)
+
+
 # ── Config management ─────────────────────────────────────────────────────────
 
 @mcp.tool()
@@ -96,6 +245,61 @@ def update_month(client_slug: str, month: str, year: str) -> str:
     config_path.write_text(json.dumps(cfg, indent=2))
 
     return f"Updated: {month} {year}  |  prev label: {ABBR[prev_month]} {prev_year}"
+
+
+# ── Config fields update ──────────────────────────────────────────────────────
+
+@mcp.tool()
+def update_config(
+    client_slug: str,
+    ga4_property_id: str = "",
+    figma_file_key: str = "",
+    figma_token: str = "",
+    client_name: str = "",
+    figma_update_method: str = "",
+) -> str:
+    """
+    Update any config field for a client. Only pass the fields you want to change.
+
+    client_slug:         e.g. '1800_buggies' or 'makesure'
+    ga4_property_id:     Google Analytics 4 Property ID (numbers only, e.g. '414073971')
+    figma_file_key:      From the Figma URL: figma.com/design/<FILE_KEY>/...
+    figma_token:         Figma Personal Access Token (figd_...)
+    client_name:         Display name e.g. '1800 Buggies'
+    figma_update_method: 'plugin', 'mcp', or 'variables'
+    """
+    paths       = get_paths(client_slug)
+    config_path = Path(paths["config"])
+    if not config_path.exists():
+        return f"Client '{client_slug}' not found. Available: {_list_clients()}"
+
+    cfg     = json.loads(config_path.read_text())
+    changed = []
+
+    if ga4_property_id:
+        cfg["ga4_property_id"] = ga4_property_id
+        changed.append(f"ga4_property_id → {ga4_property_id}")
+    if figma_file_key:
+        cfg["figma_file_key"] = figma_file_key
+        changed.append(f"figma_file_key → {figma_file_key}")
+    if figma_token:
+        cfg["figma_token"] = figma_token
+        changed.append("figma_token → ***updated***")
+    if client_name:
+        cfg["client_name"] = client_name
+        changed.append(f"client_name → {client_name}")
+    if figma_update_method:
+        valid = ["plugin", "mcp", "variables"]
+        if figma_update_method not in valid:
+            return f"Invalid method '{figma_update_method}'. Use one of: {valid}"
+        cfg["figma_update_method"] = figma_update_method
+        changed.append(f"figma_update_method → {figma_update_method}")
+
+    if not changed:
+        return "Nothing changed — pass at least one field to update."
+
+    config_path.write_text(json.dumps(cfg, indent=2))
+    return "Updated:\n" + "\n".join(f"  ✓ {c}" for c in changed)
 
 
 # ── Pipeline steps ────────────────────────────────────────────────────────────
