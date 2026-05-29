@@ -41,6 +41,7 @@ WHAT YOU CAN DO:
 - update_config — update GA4 ID, Figma file key, token, or method
 - add_new_client — create a new client folder and config
 - fetch_ga4 — pull GA4 data for a client
+- fetch_nodes — scan Figma template and auto-build node_map.json (run after fetch_ga4)
 - push_to_figma — push report data to Figma text nodes
 - export_excel — save data to Excel
 - run_full_pipeline — run all 3 steps in sequence
@@ -303,6 +304,73 @@ def update_config(
 
 
 # ── Pipeline steps ────────────────────────────────────────────────────────────
+
+@mcp.tool()
+def fetch_nodes(client_slug: str) -> str:
+    """
+    Scan the client's Figma template and auto-build node_map.json.
+
+    Run this ONCE when setting up a new client or after the Figma template changes.
+    Requires fetch_ga4 to have run first (needs report_data.json for content-matching).
+
+    Returns a summary of how many fields were auto-matched and which ones
+    still need manual mapping (if any).
+    """
+    try:
+        cfg   = load_config(client_slug)
+        paths = get_paths(client_slug)
+
+        from fetch_nodes import fetch_document, walk_nodes, auto_match, write_nodes_txt
+
+        token    = cfg["figma_token"]
+        file_key = cfg["figma_file_key"]
+
+        all_nodes = walk_nodes(fetch_document(file_key, token))
+
+        report_path = Path(paths["report_data"])
+        if not report_path.exists():
+            write_nodes_txt(all_nodes, [], {}, paths["nodes_output"])
+            return (
+                f"Found {len(all_nodes)} text nodes — saved to nodes_output.txt.\n"
+                f"But report_data.json is missing — run fetch_ga4('{client_slug}') first,\n"
+                f"then re-run fetch_nodes to auto-match fields."
+            )
+
+        report_data  = json.loads(report_path.read_text())
+        existing_map = load_node_map(client_slug)
+
+        new_map, unmatched = auto_match(all_nodes, report_data, existing_map)
+
+        Path(paths["node_map"]).write_text(json.dumps(new_map, indent=2))
+        write_nodes_txt(all_nodes, unmatched, report_data, paths["nodes_output"])
+
+        manual_count = sum(1 for e in new_map.values() if e.get("source") in ("semrush", "google_ads"))
+        auto_count   = len(new_map) - manual_count
+        total        = len(report_data)
+
+        lines = [
+            f"=== fetch_nodes: {client_slug} ===",
+            f"  Text nodes found : {len(all_nodes)}",
+            f"  Auto-matched     : {auto_count} / {total} fields",
+        ]
+        if manual_count:
+            lines.append(f"  Manual (skipped) : {manual_count} (semrush / google_ads)")
+        if unmatched:
+            lines.append(f"  Needs review     : {len(unmatched)} fields")
+            for f in unmatched:
+                lines.append(f"    - {f}")
+            lines.append("")
+            lines.append("Unmatched fields are listed at the top of nodes_output.txt.")
+            lines.append("Share that file and I can map the remaining fields for you.")
+        else:
+            lines.append("  All fields matched! node_map.json is ready.")
+            lines.append(f"  Run push_to_figma('{client_slug}') to update Figma.")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        return f"fetch_nodes failed: {e}"
+
 
 @mcp.tool()
 def fetch_ga4(client_slug: str) -> str:
