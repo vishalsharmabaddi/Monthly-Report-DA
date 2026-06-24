@@ -319,10 +319,10 @@ def main():
         print(f'  Do NOT remove or change any existing entries in node_map.json.')
         print(f'  Reply with a summary of how many fields you mapped and which ones could not be resolved.')
         print()
-        print(f"  Then run:  py run_report.py {client}")
+        print(f"  Then click 'Run Full Pipeline' in the dashboard (or run: py run_report.py {client})")
     else:
         print(f"All fields matched! {paths['node_map']} is ready.")
-        print(f"Run: py run_report.py {client}")
+        print(f"Click 'Run Full Pipeline' in the dashboard (or run: py run_report.py {client})")
 
 
 if __name__ == '__main__':

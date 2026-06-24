@@ -15,6 +15,29 @@ import streamlit as st
 
 st.set_page_config(page_title="Report Dashboard", page_icon="📊", layout="wide")
 
+st.markdown(
+    """<style>
+    [data-testid="stSidebar"] {
+        background-color: #1b2a4a;
+    }
+    [data-testid="stSidebar"] * {
+        color: #f0f2f6;
+    }
+    [data-testid="stSidebar"] input,
+    [data-testid="stSidebar"] textarea,
+    [data-testid="stSidebar"] select,
+    [data-testid="stSidebar"] [data-baseweb="select"] *,
+    [data-testid="stSidebar"] [data-baseweb="input"] * {
+        color: #1b2a4a !important;
+    }
+    [data-testid="stSidebar"] button,
+    [data-testid="stSidebar"] button * {
+        color: #1b2a4a !important;
+    }
+    </style>""",
+    unsafe_allow_html=True,
+)
+
 CLIENTS_DIR = Path("clients")
 MONTHS = [
     "January", "February", "March", "April", "May", "June",
@@ -147,6 +170,9 @@ def save_client(cfg: dict) -> Path:
     # Snapshot current node_map.json into the client folder
     if Path("node_map.json").exists():
         (client_dir / 'node_map.json').write_text(Path("node_map.json").read_text())
+    # Snapshot shared oauth_client.json so new clients don't need manual setup
+    if Path("oauth_client.json").exists() and not (client_dir / 'oauth_client.json').exists():
+        (client_dir / 'oauth_client.json').write_text(Path("oauth_client.json").read_text())
     return cfg_path
 
 
@@ -299,7 +325,20 @@ cfg = load_config()
 # Live config — uses current sidebar widget values (no save needed before running)
 live_cfg = build_config(cfg, client_name, ga4_id, figma_key, figma_token, month, year, method)
 
-st.title(f"{live_cfg['client_name']} — {live_cfg['report_month']} {live_cfg['report_year']}")
+logo_col, title_col = st.columns([2, 7])
+if Path("assets/RepoG.png").exists():
+    logo_col.image("assets/RepoG.png", width=180)
+title_col.markdown(
+    f"""<div style="display:flex; align-items:center; height:180px;">
+        <span style="font-size:2.6rem; font-weight:800; letter-spacing:0.5px;
+                     color:#1b2a4a;">
+            {live_cfg['client_name']}
+            <span style="color:#d62828;"> &mdash; </span>
+            <span style="color:#1b6ec2;">{live_cfg['report_month']} {live_cfg['report_year']}</span>
+        </span>
+    </div>""",
+    unsafe_allow_html=True,
+)
 st.caption(
     f"GA4: `{live_cfg['ga4_property_id']}` | "
     f"Figma: `{live_cfg['figma_file_key']}` | "
@@ -350,7 +389,7 @@ def step_fetch_ga4(cfg: dict) -> dict | None:
         sys.path.insert(0, str(Path(__file__).parent))
         from fetch_ga4 import fetch_ga4_data
         if not os.path.exists(paths['token']) and not has_cloud_auth:
-            st.info("Browser window khulega — Google account se login karo. Ek baar hi karna hai.")
+            st.info("A browser window will open — log in with your Google account. You only need to do this once.")
         report_data = fetch_ga4_data(cfg, paths['token'], paths['oauth_client'])
         with open(paths['report_data'], "w") as f:
             json.dump(report_data, f, indent=2)
@@ -514,7 +553,7 @@ if st.session_state.get("show_node_map_help"):
     st.code(claude_prompt, language=None)
 
     st.markdown("**Step 3 — Re-run the pipeline**")
-    st.caption("After Claude updates node_map.json, use Run Full Pipeline above.")
+    st.caption("After Claude updates node_map.json, use Run Full Pipeline below.")
     st.caption("For new months on the same template, this entire section is skipped automatically.")
 
 st.divider()
@@ -561,3 +600,14 @@ if "report_data" in st.session_state:
     st.dataframe(rows, use_container_width=True, height=480)
 else:
     st.caption("No data loaded. Click **Fetch GA4 Data** to pull the current month.")
+
+# ── Footer ────────────────────────────────────────────────────────────────────
+
+st.markdown(
+    """<div style="margin-top:2.5rem; padding-top:1rem;
+                  border-top:3px solid #d62828; text-align:center;">
+        <span style="color:#1b2a4a; font-weight:600;">Digital Assassin</span>
+        <span style="color:#9aa3b2;"> &mdash; Report Automation Tool &copy; 2026</span>
+    </div>""",
+    unsafe_allow_html=True,
+)

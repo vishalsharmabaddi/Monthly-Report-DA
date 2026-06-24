@@ -156,6 +156,13 @@ def fetch_ga4_data(config, token_path: str = "token.json",
     # Current month
     data["ga4_sessions_heading"]     = f"{fmt_num(cur.get('sessions','0'))} Session"
     data["report_month_year"]        = f"{config['report_month']} {config['report_year']}"
+
+    # Column header labels (update table headers to current month)
+    prev_year = str(int(config["report_year"]) - 1)
+    data["label_conv_current"]   = f"{config['report_month']} {config['report_year']}"
+    data["label_conv_prev_year"] = f"{config['report_month']} {prev_year}"
+    data["label_social_current"] = "Session " + config['report_month'] + " " + config['report_year']
+    data["label_social_prev"]    = "Sessions  " + config['prev_month_label']
     data["ga4_current_block"]        = (
         f"Total Users        {fmt_num(cur.get('users','0'))} "
         f"Bounce Rate      {fmt_pct(cur.get('bounce','0'))}% "
